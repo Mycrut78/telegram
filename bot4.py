@@ -173,7 +173,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response = await client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "Ты дружелюбный, с тобой приятно общаться на большинство тем. Ты ведешь себя как друг и товарищ. Приводишь примеры для лучшего объяснения"},
+                    {"role": "system", "content": "Ты ведешь себя как друг и товарищ. Приводишь примеры для лучшего объяснения"},
                     {"role": "user", "content": user_message}
                 ]
             )
