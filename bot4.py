@@ -171,7 +171,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in chat_users:
         try:
             response = await client.chat.completions.create(
-                model="gpt-4o-nano",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "Ты ведешь себя как друг и товарищ. Приводишь примеры для лучшего объяснения"},
                     {"role": "user", "content": user_message}
