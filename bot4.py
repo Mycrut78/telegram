@@ -170,9 +170,8 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id in chat_users:
         try:
-            # Запрос к OpenAI API
             response = await client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "Ты дружелюбный, с тобой приятно общаться на большинство тем. Ты ведешь себя как друг и товарищ. Приводишь примеры для лучшего объяснения"},
                     {"role": "user", "content": user_message}
@@ -181,22 +180,28 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             reply = response.choices[0].message.content
 
-            # Получаем информацию о токенах
             prompt_tokens = response.usage.prompt_tokens
             completion_tokens = response.usage.completion_tokens
             total_tokens = response.usage.total_tokens
 
-            # Отправляем ответ и информацию о токенах
+            # Цена: $0.15 за 1000 токенов → 0.00015 за 1 токен
+            price_per_token = 0.15 / 1000
+            cost = total_tokens * price_per_token
+
             await update.message.reply_text(reply)
             await update.message.reply_text(
                 f"🔢 Использовано токенов:\n"
                 f"📥 Ввод: {prompt_tokens}\n"
                 f"📤 Ответ: {completion_tokens}\n"
-                f"💡 Всего: {total_tokens}"
+                f"💡 Всего: {total_tokens}\n\n"
+                f"💰 Стоимость запроса: ${cost:.6f}"
             )
         except Exception as e:
             logging.error(f"Ошибка OpenAI API: {e}")
             await update.message.reply_text("Извини, возникла ошибка при обработке запроса.")
+    else:
+        await update.message.reply_text(f"Ты написал: {user_message}")
+
     else:
         await update.message.reply_text(f"Ты написал: {user_message}")
 
