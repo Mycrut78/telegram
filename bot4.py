@@ -178,14 +178,28 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     {"role": "user", "content": user_message}
                 ]
             )
-            # Извлечение ответа
+
             reply = response.choices[0].message.content
+
+            # Получаем информацию о токенах
+            prompt_tokens = response.usage.prompt_tokens
+            completion_tokens = response.usage.completion_tokens
+            total_tokens = response.usage.total_tokens
+
+            # Отправляем ответ и информацию о токенах
             await update.message.reply_text(reply)
+            await update.message.reply_text(
+                f"🔢 Использовано токенов:\n"
+                f"📥 Ввод: {prompt_tokens}\n"
+                f"📤 Ответ: {completion_tokens}\n"
+                f"💡 Всего: {total_tokens}"
+            )
         except Exception as e:
             logging.error(f"Ошибка OpenAI API: {e}")
             await update.message.reply_text("Извини, возникла ошибка при обработке запроса.")
     else:
         await update.message.reply_text(f"Ты написал: {user_message}")
+
 
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Извини, я не знаю такой команды.")
