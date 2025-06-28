@@ -8,11 +8,15 @@ import openai
 
 from dotenv import load_dotenv
 import os
+import logging
 
 load_dotenv()
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 openai.api_key = os.getenv("OPENAI_API_KEY")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+
+logging.basicConfig(level=logging.INFO)
 
 chat_users = set()  # множество для отслеживания пользователей в режиме чата
 
@@ -210,7 +214,12 @@ async def main():
     await set_commands(app)
 
     print("Бот запущен...")
-    await app.run_polling()
+    await app.run_webhook(
+        listen="0.0.0.0",  # Привязка к всем адресам
+        port=int(os.getenv("PORT", 5000)),  # Порт для прослушивания
+        url_path=TOKEN,  # Путь к токену в URL
+        webhook_url=f"{WEBHOOK_URL}/{TOKEN}",  # Вебхук URL
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())
