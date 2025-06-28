@@ -179,7 +179,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]
             )
             # Извлечение ответа
-            reply = response['choices'][0]['message']['content']
+            reply = response.choices[0].message.content
             await update.message.reply_text(reply)
         except Exception as e:
             logging.error(f"Ошибка OpenAI API: {e}")
