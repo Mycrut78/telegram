@@ -168,11 +168,9 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             # Запрос к OpenAI API
             response = await openai.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "Ты дружелюбный, с тобой приятно общаться на большинство тем. Ты ведешь себя как друг и товарищ. Приводишь примеры для лучшего объяснения"},
-                    {"role": "user", "content": user_message}
-                ]
+                model="gpt-4",  # Указываем модель GPT
+                prompt=user_message,  # Вставляем сообщение пользователя как prompt
+                max_tokens=200  # Вы можете задать максимальное количество токенов для ответа
             )
             # Извлечение ответа
             reply = response['choices'][0]['message']['content']
