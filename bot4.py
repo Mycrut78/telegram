@@ -167,7 +167,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in chat_users:
         try:
             # Запрос к OpenAI API
-            response = await openai.ChatCompletion.acreate(
+            response = await openai.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "Ты дружелюбный, с тобой приятно общаться на большинство тем. Ты ведешь себя как друг и товарищ. Приводишь примеры для лучшего объяснения"},
