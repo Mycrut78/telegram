@@ -14,7 +14,7 @@ load_dotenv()
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 openai.api_key = os.getenv("OPENAI_API_KEY")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+WEBHOOK_URL = https://telegram-o7zz.onrender.com
 
 logging.basicConfig(level=logging.INFO)
 
