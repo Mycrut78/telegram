@@ -5,6 +5,8 @@ import asyncio
 from telegram import Update, BotCommand
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 import openai
+from openai import AsyncOpenAI
+
 
 from dotenv import load_dotenv
 import os
@@ -15,6 +17,8 @@ load_dotenv()
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 WEBHOOK_URL = "https://telegram-l27s.onrender.com"
+client = AsyncOpenAI(api_key=openai.api_key)
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -167,10 +171,12 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in chat_users:
         try:
             # Запрос к OpenAI API
-            response = await openai.completions.create(
-                model="gpt-4",  # Указываем модель GPT
-                prompt=user_message,  # Вставляем сообщение пользователя как prompt
-                max_tokens=200  # Вы можете задать максимальное количество токенов для ответа
+            response = await client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "Ты дружелюбный, с тобой приятно общаться на большинство тем. Ты ведешь себя как друг и товарищ. Приводишь примеры для лучшего объяснения"},
+                    {"role": "user", "content": user_message}
+                ]
             )
             # Извлечение ответа
             reply = response['choices'][0]['message']['content']
