@@ -202,10 +202,6 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(f"Ты написал: {user_message}")
 
-    else:
-        await update.message.reply_text(f"Ты написал: {user_message}")
-
-
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Извини, я не знаю такой команды.")
 
