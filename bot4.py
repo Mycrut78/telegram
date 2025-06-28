@@ -2,8 +2,8 @@ import nest_asyncio
 nest_asyncio.apply()
 import random
 import asyncio
-from telegram import Update, BotCommand
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram import Update, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import openai
 from openai import AsyncOpenAI
 
@@ -77,6 +77,7 @@ arsenals = {
     ]
 }
 
+
 arsenals_зарядок = {
     "зарядка_вариант_1": [
         "Утренняя зарядка на 10 минут — включайся в драйв! ⚡️🔥\n"
@@ -124,6 +125,179 @@ arsenals_зарядок = {
     ],
 }
 
+async def start_training_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [
+            InlineKeyboardButton("💥 День 1", callback_data='тренировка_день1'),
+            InlineKeyboardButton("🍑 День 2", callback_data='тренировка_день2')
+        ],
+        [
+            InlineKeyboardButton("🦾 День 3", callback_data='тренировка_день3'),
+            InlineKeyboardButton("⚡ День 4", callback_data='тренировка_день4')
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    message = (
+        "🔥 *Готов прокачать тело и дух?*\n"
+        "Выбери день тренировки и вперёд к цели!\n\n"
+        "_Помни: маленький шаг каждый день — это путь к большому результату_ 💪"
+    )
+
+    await update.message.reply_text(message, reply_markup=reply_markup, parse_mode="Markdown")
+
+warmup = (
+        "🟡 *РАЗМИНКА (5 минут)*\n"
+        "• Прыжки на месте — 1 мин\n"
+        "• Круговые вращения руками и ногами — 1 мин\n"
+        "• Приседания без веса — 15 раз\n"
+        "• Наклоны в стороны — 20 раз\n"
+        "• Планка — 30 сек\n"
+    )
+
+async def handle_day1_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()  # Закрываем "часики" на кнопке
+
+    # 1. Разминка
+    await query.message.reply_text(warmup, parse_mode="Markdown")
+
+    # 2. Основная тренировка
+    workout = (
+        "💥 *ДЕНЬ 1 — Грудь, руки, пресс*\n\n"
+        "• Отжимания от пола — 3×максимум\n"
+        "• Отжимания с узкой постановкой — 3×10\n"
+        "• Гантели вверх лёжа на полу — 3×12\n"
+        "• Подъём гантелей на бицепс — 3×12\n"
+        "• Пресс «велосипед» — 3×20\n"
+        "• Планка — 3×30 сек"
+    )
+    await query.message.reply_text(workout, parse_mode="Markdown")
+
+    # 3. Полезные советы
+    tips = (
+        "🧠 *ПОЛЕЗНЫЕ ПРАВИЛА:*\n"
+        "• Тренируйся натощак утром или через 2 ч после еды\n"
+        "• Пей воду (2+ л в день)\n"
+        "• Не наедайся после — особенно сладким и жирным\n"
+        "• Следи за прогрессом: фото, вес, замеры талии 📸"
+    )
+    await query.message.reply_text(tips, parse_mode="Markdown")
+
+async def handle_day2_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    # 1. Разминка
+    await query.message.reply_text(warmup, parse_mode="Markdown")
+
+    # 2. Основная тренировка
+    workout = (
+        "🍑 *ДЕНЬ 2 — Ягодицы, ноги, пресс*\n\n"
+        "• Приседания с гантелями — 3×15\n"
+        "• Выпады вперёд (каждая нога) — 3×12\n"
+        "• Ягодичный мостик с весом — 3×15\n"
+        "• Подъём ног лёжа (пресс) — 3×20\n"
+        "• Скручивания — 3×20\n"
+        "• Планка боковая (левая+правая) — по 30 сек"
+    )
+    await query.message.reply_text(workout, parse_mode="Markdown")
+
+    # 3. Полезные советы
+    tips = (
+        "🧠 *ПОЛЕЗНЫЕ ПРАВИЛА:*\n"
+        "• Утро — лучшее время для тонуса\n"
+        "• Следи за техникой в выпадах (колено не за носок)\n"
+        "• Во время моста — сжимай ягодицы, а не поясницу\n"
+        "• Не забывай про воду и дыхание 🌊🫁"
+    )
+    await query.message.reply_text(tips, parse_mode="Markdown")
+
+async def handle_day3_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    # 1. Разминка
+    warmup = (
+        "🟡 *РАЗМИНКА (5 минут)*\n"
+        "• Прыжки на месте — 1 мин\n"
+        "• Круговые вращения руками и ногами — 1 мин\n"
+        "• Приседания без веса — 15 раз\n"
+        "• Наклоны в стороны — 20 раз\n"
+        "• Планка — 30 сек\n"
+    )
+    await query.message.reply_text(warmup, parse_mode="Markdown")
+
+    # 2. Основная тренировка
+    workout = (
+        "🦾 *ДЕНЬ 3 — Спина, плечи, пресс*\n\n"
+        "• Подтягивания — 3×максимум (можно с резинкой или гравитроном)\n"
+        "• Тяга гантелей в наклоне — 3×12\n"
+        "• Разводка гантелей в стороны — 3×12\n"
+        "• \"Супермен\" лёжа — 3×20\n"
+        "• Планка с подъёмом ноги — 3×30 сек\n"
+        "• Скручивания с руками вверх — 3×20"
+    )
+    await query.message.reply_text(workout, parse_mode="Markdown")
+
+    # 3. Полезные советы
+    tips = (
+        "🧠 *ПОЛЕЗНЫЕ ПРАВИЛА:*\n"
+        "• Не зажимай шею при тяге — шея расслаблена\n"
+        "• При разведении гантелей не бросай руки вниз, движение должно быть контролируемым\n"
+        "• В упражнении \"Супермен\" держи голову на одной линии с телом\n"
+        "• Напрягай пресс даже в упражнениях на спину — так ты защищаешь поясницу"
+    )
+    await query.message.reply_text(tips, parse_mode="Markdown")
+
+async def handle_day4_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    # 1. Разминка
+    warmup = (
+        "🟡 *РАЗМИНКА (5 минут)*\n"
+        "• Прыжки на месте — 1 мин\n"
+        "• Круговые вращения руками и ногами — 1 мин\n"
+        "• Приседания без веса — 15 раз\n"
+        "• Наклоны в стороны — 20 раз\n"
+        "• Планка — 30 сек\n"
+    )
+    await query.message.reply_text(warmup, parse_mode="Markdown")
+
+    # 2. Основная тренировка
+    workout = (
+        "⚡ *ДЕНЬ 4 — Кардио и добивка*\n\n"
+        "• Бёрпи — 3×10\n"
+        "• Прыжки с разведением ног — 3×20\n"
+        "• Отжимания на максимум — 3×макс\n"
+        "• Скручивания на пресс — 3×20\n"
+        "• Планка — 3×1 мин"
+    )
+    await query.message.reply_text(workout, parse_mode="Markdown")
+
+    # 3. Полезные советы
+    tips = (
+        "🧠 *ПОЛЕЗНЫЕ ПРАВИЛА:*\n"
+        "• Следи за дыханием во время кардио — выдох на усилие\n"
+        "• Делай бёрпи в своём темпе — лучше качество, чем темп 🐢\n"
+        "• Пей воду маленькими глотками между кругами 💧\n"
+        "• После — сделай лёгкую растяжку, особенно ног"
+    )
+    await query.message.reply_text(tips, parse_mode="Markdown")
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 async def random_skuki(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Выбираем случайный арсенал
@@ -156,11 +330,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def set_commands(application):
     commands = [
     BotCommand("start", "Запустить бота"),
+    BotCommand("training", "Выбрать/начать тренировку"),
     BotCommand("help", "Помощь"),
     BotCommand("go", "Начать разговор"),
     BotCommand("exit", "Выйти из разговора"),
     BotCommand("random_skuki", "Получить случайную идею для занятия"),
-    BotCommand("random_zaryadki", "Получить случайную зарядку"),
+    BotCommand("random_zaryadki", "Получить случайную зарядку")
 ]
     await application.bot.set_my_commands(commands)
 
@@ -212,6 +387,15 @@ async def main():
     app.add_handler(CommandHandler("exit", exit_chat))
     app.add_handler(CommandHandler("random_skuki", random_skuki))
     app.add_handler(CommandHandler("random_zaryadki", random_zaryadki))
+
+
+    app.add_handler(CommandHandler("training", start_training_menu))
+    app.add_handler(CallbackQueryHandler(handle_day1_workout, pattern='^тренировка_день1$'))
+    app.add_handler(CallbackQueryHandler(handle_day2_workout, pattern='^тренировка_день2$'))
+    app.add_handler(CallbackQueryHandler(handle_day3_workout, pattern='^тренировка_день3$'))
+    app.add_handler(CallbackQueryHandler(handle_day4_workout, pattern='^тренировка_день4$'))
+
+
 
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
