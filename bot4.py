@@ -166,17 +166,19 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id in chat_users:
         try:
+            # Запрос к OpenAI API
             response = await openai.chat.completions.create(
-                model="gpt-4.1",
+                model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "Ты дружелюбный ассистент по тренировкам."},
+                    {"role": "system", "content": "Ты дружелюбный, с тобой приятно общаться на большинство тем. Ты ведешь себя как друг и товарищ. Приводишь примеры для лучшего объяснения"},
                     {"role": "user", "content": user_message}
                 ]
             )
-            reply = response.choices[0].message.content
+            # Извлечение ответа
+            reply = response['choices'][0]['message']['content']
             await update.message.reply_text(reply)
         except Exception as e:
-            print(f"Ошибка OpenAI API: {e}")
+            logging.error(f"Ошибка OpenAI API: {e}")
             await update.message.reply_text("Извини, возникла ошибка при обработке запроса.")
     else:
         await update.message.reply_text(f"Ты написал: {user_message}")
