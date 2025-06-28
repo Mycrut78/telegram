@@ -180,8 +180,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             reply = response.choices[0].message.content
             await update.message.reply_text(reply)
-
-            )
+            
         except Exception as e:
             logging.error(f"Ошибка OpenAI API: {e}")
             await update.message.reply_text("Извини, возникла ошибка при обработке запроса.")
