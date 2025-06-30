@@ -127,15 +127,16 @@ arsenals_зарядок = {
 
 async def start_training_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [
-            InlineKeyboardButton("💥 День 1", callback_data='тренировка_день1'),
-            InlineKeyboardButton("🍑 День 2", callback_data='тренировка_день2')
-        ],
-        [
-            InlineKeyboardButton("🦾 День 3", callback_data='тренировка_день3'),
-            InlineKeyboardButton("⚡ День 4", callback_data='тренировка_день4')
-        ]
+    [
+        InlineKeyboardButton("💥 День 1", callback_data='тренировка1'),
+        InlineKeyboardButton("🍑 День 2", callback_data='тренировка2')
+    ],
+    [
+        InlineKeyboardButton("🦾 День 3", callback_data='тренировка3'),
+        InlineKeyboardButton("⚡ День 4", callback_data='тренировка4')
     ]
+]
+
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     message = (
@@ -146,157 +147,820 @@ async def start_training_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await update.message.reply_text(message, reply_markup=reply_markup, parse_mode="Markdown")
 
-warmup = (
-        "🟡 *РАЗМИНКА (5 минут)*\n"
-        "• Прыжки на месте — 1 мин\n"
-        "• Круговые вращения руками и ногами — 1 мин\n"
-        "• Приседания без веса — 15 раз\n"
-        "• Наклоны в стороны — 20 раз\n"
-        "• Планка — 30 сек\n"
+
+async def handle_training_day_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data  # ожидается 'тренировка1', 'тренировка2' и т.д.
+    
+    if data.startswith("тренировка"):
+        day = int(data.replace("тренировка", ""))
+        context.user_data[f"warmup_index_day{day}"] = 0
+        context.user_data[f"main_index_day{day}"] = 0
+        context.user_data["warmup_message_ids"] = []
+        context.user_data["main_message_ids"] = []
+
+        # Отправляем первое сообщение разминки для дня
+        warmup_texts = {
+            1: (
+                "🟡 *РАЗМИНКА (5 минут)*\nНачнём шаг за шагом!\n\n"
+                "1️⃣ Круговые вращения руками вперёд — 15 секунд\n"
+                "2️⃣ Круговые вращения руками назад — 15 секунд\n"
+                "3️⃣ Плечевые круги и махи руками — 30 секунд\n"
+                "4️⃣ Прыжки на месте — 30 секунд\n"
+                "5️⃣ Лёгкие отжимания от пола — 10 повторений\n"
+                "6️⃣ Подъём гантелей на бицепс (разогрев) — 10 повторений\n"
+                "7️⃣ Скручивания на пресс — 15 повторений\n"
+                "8️⃣ Планка — 30 секунд\n"
+            ),
+            2: (
+                "🟡 *РАЗМИНКА (5 минут)*\nНачнём шаг за шагом!\n\n"
+                "1️⃣ Прыжки на месте — 60 секунд\n"
+                "2️⃣ Круговые вращения руками и ногами — 60 секунд\n"
+                "3️⃣ Приседания без веса — 15 повторений\n"
+                "4️⃣ Наклоны в стороны — 20 повторений\n"
+                "5️⃣ Планка — 30 секунд\n"
+            ),
+            3: (
+                "🟡 *РАЗМИНКА (5 минут)*\nНачнём шаг за шагом!\n\n"
+                "1️⃣ Прыжки на месте — 60 секунд\n"
+                "2️⃣ Круговые вращения руками и ногами — 60 секунд\n"
+                "3️⃣ Приседания без веса — 15 повторений\n"
+                "4️⃣ Наклоны в стороны — 20 повторений\n"
+                "5️⃣ Планка — 30 секунд\n"
+            ),
+            4: (
+                "🟡 *РАЗМИНКА (5 минут)*\nНачнём шаг за шагом!\n\n"
+                "1️⃣ Прыжки на месте — 60 секунд\n"
+                "2️⃣ Круговые вращения руками и ногами — 60 секунд\n"
+                "3️⃣ Приседания без веса — 15 повторений\n"
+                "4️⃣ Наклоны в стороны — 20 повторений\n"
+                "5️⃣ Планка — 30 секунд\n"
+            )
+        }
+        
+        text = warmup_texts.get(day, "Разминка для этого дня не задана.")
+        await query.message.reply_text(text, parse_mode="Markdown")
+
+        # Отправляем первый шаг разминки с кнопками
+        await send_next_warmup_step(day, query.message.chat_id, context)
+
+
+
+
+async def handle_warmup_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    # callback_data: разминка{day}_шаг_{index}_{action}
+    data = query.data
+    parts = data.split("_")
+
+    # Извлекаем номер дня из первой части
+    day_part = parts[0]  # 'разминка1', 'разминка2' и т.д.
+    day = int(day_part.replace("разминка", ""))
+
+    step_index = int(parts[2])
+    action = parts[3]
+    chat_id = query.message.chat_id
+
+    # Получаем список разминки для нужного дня
+    warmup_lists = {
+        1: warmup_steps_day1,
+        2: warmup_steps_day2,
+        3: warmup_steps_day3,
+        4: warmup_steps_day4,
+    }
+
+    warmup_steps_for_day = warmup_lists.get(day)
+    if not warmup_steps_for_day:
+        await query.message.reply_text("⚠️ Разминка для этого дня не найдена.")
+        return
+
+    step = warmup_steps_for_day[step_index]
+
+    if action == "старт":
+        msg_timer_start = await query.message.reply_text(f"⏱ {step['name']} — таймер {step.get('duration', 0)} сек начат!")
+        await asyncio.sleep(step.get('duration', 0))
+        msg_timer_end = await query.message.reply_text(f"✅ {step['name']} завершено!")
+
+        context.user_data["warmup_message_ids"] = [
+            query.message.message_id,
+            msg_timer_start.message_id,
+            msg_timer_end.message_id
+        ]
+        context.user_data["was_started"] = True
+
+    elif action == "готово":
+        msg_done = await query.message.reply_text(f"✅ {step['name']} отмечено как выполнено.")
+        await asyncio.sleep(2)
+
+        message_ids = context.user_data.get("warmup_message_ids", [])
+        message_ids.append(msg_done.message_id)
+        message_ids.append(query.message.message_id)
+
+        try:
+            if context.user_data.get("was_started"):
+                for msg_id in message_ids[-4:]:
+                    await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            else:
+                for msg_id in message_ids[-2:]:
+                    await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+        except Exception as e:
+            print(f"Ошибка при удалении сообщения: {e}")
+
+        context.user_data["was_started"] = False
+        context.user_data["warmup_message_ids"] = []
+
+        # Увеличиваем индекс разминки и отправляем следующий шаг
+        key = f"warmup_index_day{day}"
+        index = context.user_data.get(key, 0) + 1
+        context.user_data[key] = index
+
+        if index >= len(warmup_steps_for_day):
+            # Разминка закончена, переходим к основной тренировке
+            await start_main_workout(day, chat_id, context)
+        else:
+            # Отправляем следующий шаг разминки
+            await send_next_warmup_step(day, chat_id, context)
+
+async def send_next_warmup_step(day: int, chat_id, context):
+    warmup_lists = {
+        1: warmup_steps_day1,
+        2: warmup_steps_day2,
+        3: warmup_steps_day3,
+        4: warmup_steps_day4,
+    }
+
+    warmup_steps_for_day = warmup_lists.get(day)
+    if not warmup_steps_for_day:
+        await context.bot.send_message(chat_id=chat_id, text="⚠️ Разминка для этого дня не найдена.")
+        return
+
+    index = context.user_data.get(f"warmup_index_day{day}", 0)
+
+    if index >= len(warmup_steps_for_day):
+        # Разминка завершена, переходим к основной тренировке
+        await start_main_workout(day, chat_id, context)
+        return
+
+    step = warmup_steps_for_day[index]
+    text = f"*{step['name']}*\n"
+    text += f"⏱ {step['duration']} сек" if step["type"] == "time" else f"🔁 {step['reps']} раз"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"разминка{day}_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"разминка{day}_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
     )
 
+    context.user_data["warmup_message_ids"] = [message.message_id]
+
+async def start_main_workout(day, chat_id, context):
+    main_workout = {
+        1: (
+            "🎉 Разминка завершена! Переходим к основной тренировке...\n\n"
+            "💥 *ДЕНЬ 1 — Грудь, руки, пресс*\n\n"
+            "• Отжимания от пола — 3×максимум\n"
+            "• Отжимания с узкой постановкой — 3×10\n"
+            "• Гантели вверх лёжа на полу — 3×12\n"
+            "• Подъём гантелей на бицепс — 3×15\n"
+            "• Скручивания на пресс — 3×20\n"
+            "• Планка — 3×30 сек"
+        ),
+        2: (
+            "🎉 Разминка завершена! Переходим к основной тренировке...\n\n"
+            "🍑 *ДЕНЬ 2 — Ягодицы, ноги, пресс*\n\n"
+            "• Приседания с гантелями — 3×15\n"
+            "• Выпады вперёд (каждая нога) — 3×12\n"
+            "• Ягодичный мостик с весом — 3×15\n"
+            "• Подъём ног лёжа (пресс) — 3×20\n"
+            "• Скручивания — 3×20\n"
+            "• Планка боковая (левая + правая) — по 30 сек"
+        ),
+        3: (
+            "🎉 Разминка завершена! Переходим к основной тренировке...\n\n"
+            "🦾 *ДЕНЬ 3 — Спина, плечи, пресс*\n\n"
+            "• Подтягивания — 3×максимум\n"
+            "• Тяга гантелей в наклоне — 3×12\n"
+            "• Разводка гантелей в стороны — 3×12\n"
+            "• \"Супермен\" лёжа — 3×20\n"
+            "• Планка с подъёмом ноги — 3×30 сек\n"
+            "• Скручивания с руками вверх — 3×20"
+        ),
+        4: (
+            "🎉 Разминка завершена! Переходим к основной тренировке...\n\n"
+            "⚡ *ДЕНЬ 4 — Кардио и добивка*\n\n"
+            "• Бёрпи — 3×10\n"
+            "• Прыжки с разведением ног — 3×20\n"
+            "• Отжимания на максимум — 3×макс\n"
+            "• Скручивания на пресс — 3×20\n"
+            "• Планка — 3×1 мин"
+        )
+    }
+
+    text = main_workout.get(day, "Основная тренировка не найдена.")
+    await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+    context.user_data[f"main_index_day{day}"] = 0
+    await send_next_main_step(day, chat_id, context)
+
+
+
+
+
+async def handle_main_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    # callback_data: тренировка{day}_шаг_{index}_{action}
+    data = query.data
+    parts = data.split("_")
+
+    day_part = parts[0]  # 'тренировка1', 'тренировка2' и т.д.
+    day = int(day_part.replace("тренировка", ""))
+
+    step_index = int(parts[2])
+    action = parts[3]
+    chat_id = query.message.chat_id
+
+    main_workouts = {
+        1: main_workout_day1,
+        2: main_workout_day2,
+        3: main_workout_day3,
+        4: main_workout_day4,
+    }
+
+    workout_for_day = main_workouts.get(day)
+    if not workout_for_day:
+        await query.message.reply_text("⚠️ Тренировка для этого дня не найдена.")
+        return
+
+    step = workout_for_day[step_index]
+
+    if action == "старт":
+        if step.get("type") == "time":
+            msg_start = await query.message.reply_text(f"⏱ {step['name']} — таймер {step['duration']} сек начат!")
+            await asyncio.sleep(step['duration'])
+            msg_end = await query.message.reply_text(f"✅ {step['name']} завершено!")
+            context.user_data["main_message_ids"] = [
+                query.message.message_id,
+                msg_start.message_id,
+                msg_end.message_id,
+            ]
+        else:
+            context.user_data["main_message_ids"] = [query.message.message_id]
+        context.user_data["main_started"] = True
+
+    elif action == "готово":
+        msg_done = await query.message.reply_text(f"✅ {step['name']} отмечено как выполнено.")
+        await asyncio.sleep(2)
+
+        message_ids = context.user_data.get("main_message_ids", [])
+        message_ids.append(msg_done.message_id)
+        message_ids.append(query.message.message_id)
+
+        try:
+            if context.user_data.get("main_started"):
+                for msg_id in message_ids[-4:]:
+                    await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            else:
+                for msg_id in message_ids[-2:]:
+                    await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+        except Exception as e:
+            print(f"Ошибка при удалении сообщения: {e}")
+
+        context.user_data["main_started"] = False
+        context.user_data["main_message_ids"] = []
+
+        key = f"main_index_day{day}"
+        index = context.user_data.get(key, 0) + 1
+        context.user_data[key] = index
+
+        if index >= len(workout_for_day):
+            await context.bot.send_message(chat_id=chat_id, text=f"🎉 Основная тренировка Дня {day} завершена! Отличная работа! 💪")
+            return
+
+        await send_next_main_step(day, chat_id, context)
+
+
+async def send_next_main_step(day: int, chat_id, context):
+    main_workouts = {
+        1: main_workout_day1,
+        2: main_workout_day2,
+        3: main_workout_day3,
+        4: main_workout_day4,
+    }
+
+    workout_for_day = main_workouts.get(day)
+    if workout_for_day is None:
+        await context.bot.send_message(chat_id=chat_id, text="⚠️ Тренировка для этого дня не найдена.")
+        return
+
+    index = context.user_data.get(f"main_index_day{day}", 0)
+    if index >= len(workout_for_day):
+        return
+
+    step = workout_for_day[index]
+
+    text = f"*{step['name']}*\n"
+    if step.get("type") == "time":
+        text += f"⏱ {step['sets']}×{step['duration']} сек"
+    else:
+        text += f"🔁 {step['reps']}"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"тренировка{day}_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"тренировка{day}_шаг_{index}_готово"),
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown",
+    )
+
+    context.user_data["main_message_ids"] = [message.message_id]
+
+
+
+
+
+
+
+
+
+
+###################################################################################################################3
+main_workout_day1 = [
+    {"name": "Отжимания от пола", "reps": "3×максимум"},
+    {"name": "Отжимания с узкой постановкой", "reps": "3×10"},
+    {"name": "Гантели вверх лёжа на полу", "reps": "3×12"},
+    {"name": "Подъём гантелей на бицепс", "reps": "3×15"},
+    {"name": "Скручивания на пресс", "reps": "3×20"},
+    {"name": "Планка", "duration": 30, "type": "time", "sets": 3}
+]
+
+warmup_steps_day1 = [
+    {"name": "Круговые вращения руками вперёд", "duration": 15, "type": "time"},
+    {"name": "Круговые вращения руками назад", "duration": 15, "type": "time"},
+    {"name": "Плечевые круги и махи руками", "duration": 30, "type": "time"},
+    {"name": "Прыжки на месте", "duration": 30, "type": "time"},
+    {"name": "Лёгкие отжимания от пола", "reps": 10, "type": "reps"},
+    {"name": "Подъём гантелей на бицепс (разогрев)", "reps": 10, "type": "reps"},
+    {"name": "Скручивания на пресс", "reps": 15, "type": "reps"},
+    {"name": "Планка", "duration": 30, "type": "time"}
+]
 async def handle_day1_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()  # Закрываем "часики" на кнопке
+    await query.answer()
 
-    # 1. Разминка
-    await query.message.reply_text(warmup, parse_mode="Markdown")
+    context.user_data["warmup_index"] = 0
+    context.user_data["main_index"] = 0
+    context.user_data["warmup_message_ids"] = []
+    context.user_data["main_message_ids"] = []
 
-    # 2. Основная тренировка
-    workout = (
-        "💥 *ДЕНЬ 1 — Грудь, руки, пресс*\n\n"
-        "• Отжимания от пола — 3×максимум\n"
-        "• Отжимания с узкой постановкой — 3×10\n"
-        "• Гантели вверх лёжа на полу — 3×12\n"
-        "• Подъём гантелей на бицепс — 3×12\n"
-        "• Пресс «велосипед» — 3×20\n"
-        "• Планка — 3×30 сек"
+    await query.message.reply_text(
+        "🟡 *РАЗМИНКА (5 минут)*\nНачнём шаг за шагом!\n\n"
+        "1️⃣ Круговые вращения руками вперёд — 15 секунд\n"
+        "2️⃣ Круговые вращения руками назад — 15 секунд\n"
+        "3️⃣ Плечевые круги и махи руками — 30 секунд\n"
+        "4️⃣ Прыжки на месте — 30 секунд\n"
+        "5️⃣ Лёгкие отжимания от пола — 10 повторений\n"
+        "6️⃣ Подъём гантелей на бицепс (разогрев) — 10 повторений\n"
+        "7️⃣ Скручивания на пресс — 15 повторений\n"
+        "8️⃣ Планка — 30 секунд\n",
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(workout, parse_mode="Markdown")
+    await send_next_warmup_step_day1(query.message.chat_id, context)
 
-    # 3. Полезные советы
-    tips = (
-        "🧠 *ПОЛЕЗНЫЕ ПРАВИЛА:*\n"
-        "• Тренируйся натощак утром или через 2 ч после еды\n"
-        "• Пей воду (2+ л в день)\n"
-        "• Не наедайся после — особенно сладким и жирным\n"
-        "• Следи за прогрессом: фото, вес, замеры талии 📸"
+
+async def send_next_warmup_step_day1(chat_id, context):
+    index = context.user_data.get("warmup_index", 0)
+
+    if index >= len(warmup_steps_day1):
+        await context.bot.send_message(chat_id=chat_id,
+            text=(
+                "🎉 Разминка завершена! Переходим к основной тренировке...\n\n"
+                "💥 *ДЕНЬ 1 — Грудь, руки, пресс*\n\n"
+                "• Отжимания от пола — 3×максимум\n"
+                "• Отжимания с узкой постановкой — 3×10\n"
+                "• Гантели вверх лёжа на полу — 3×12\n"
+                "• Подъём гантелей на бицепс — 3×15\n"
+                "• Скручивания на пресс — 3×20\n"
+                "• Планка — 3×30 сек"
+            ),
+            parse_mode="Markdown"
+        )
+        context.user_data["main_index"] = 0
+        await send_next_main_step_day1(chat_id, context)
+        return
+
+    step = warmup_steps_day1[index]
+    text = f"*{step['name']}*\n"
+    text += f"⏱ {step['duration']} сек" if step["type"] == "time" else f"🔁 {step['reps']} раз"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"разминка1_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"разминка1_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(tips, parse_mode="Markdown")
 
+    context.user_data["warmup_message_ids"] = [message.message_id]
+
+
+async def send_next_main_step_day1(chat_id, context):
+    index = context.user_data.get("main_index", 0)
+
+    if index >= len(main_workout_day1):
+        await context.bot.send_message(chat_id=chat_id, text="🎉 Основная тренировка Дня 1 завершена! Отлично поработал! 💪")
+        return
+
+    step = main_workout_day1[index]
+    text = f"*{step['name']}*\n"
+
+    if step.get("type") == "time":
+        text += f"⏱ {step['sets']}×{step['duration']} сек"
+    else:
+        text += f"🔁 {step['reps']}"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"тренировка1_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"тренировка1_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
+    )
+
+    context.user_data["main_message_ids"] = [message.message_id]
+
+
+
+
+############################################################################################################################
+main_workout_day2 = [
+    {"name": "Приседания с гантелями", "reps": "3×15"},
+    {"name": "Выпады вперёд (каждая нога)", "reps": "3×12"},
+    {"name": "Ягодичный мостик с весом", "reps": "3×15"},
+    {"name": "Подъём ног лёжа (пресс)", "reps": "3×20"},
+    {"name": "Скручивания", "reps": "3×20"},
+    {"name": "Планка боковая (левая + правая)", "duration": 30, "type": "time", "sets": 2}  # по 30 сек на каждую сторону
+]
+
+warmup_steps_day2 = [
+    {"name": "Прыжки на месте", "duration": 60, "type": "time"},
+    {"name": "Круговые вращения руками и ногами", "duration": 60, "type": "time"},
+    {"name": "Приседания без веса", "reps": 15, "type": "reps"},
+    {"name": "Наклоны в стороны", "reps": 20, "type": "reps"},
+    {"name": "Планка", "duration": 30, "type": "time"}
+]
+
+# Запуск разминки и основной тренировки Дня 2
 async def handle_day2_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    # 1. Разминка
-    await query.message.reply_text(warmup, parse_mode="Markdown")
+    context.user_data["warmup_index"] = 0
+    context.user_data["main_index"] = 0
+    context.user_data["warmup_message_ids"] = []
+    context.user_data["main_message_ids"] = []
 
-    # 2. Основная тренировка
-    workout = (
-        "🍑 *ДЕНЬ 2 — Ягодицы, ноги, пресс*\n\n"
-        "• Приседания с гантелями — 3×15\n"
-        "• Выпады вперёд (каждая нога) — 3×12\n"
-        "• Ягодичный мостик с весом — 3×15\n"
-        "• Подъём ног лёжа (пресс) — 3×20\n"
-        "• Скручивания — 3×20\n"
-        "• Планка боковая (левая+правая) — по 30 сек"
+    await query.message.reply_text(
+        "🟡 *РАЗМИНКА (5 минут)*\nНачнём шаг за шагом!\n\n"
+        "1️⃣ Прыжки на месте — 60 секунд\n"
+        "2️⃣ Круговые вращения руками и ногами — 60 секунд\n"
+        "3️⃣ Приседания без веса — 15 повторений\n"
+        "4️⃣ Наклоны в стороны — 20 повторений\n"
+        "5️⃣ Планка — 30 секунд\n",
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(workout, parse_mode="Markdown")
+    await send_next_warmup_step_day2(query.message.chat_id, context)
 
-    # 3. Полезные советы
-    tips = (
-        "🧠 *ПОЛЕЗНЫЕ ПРАВИЛА:*\n"
-        "• Утро — лучшее время для тонуса\n"
-        "• Следи за техникой в выпадах (колено не за носок)\n"
-        "• Во время моста — сжимай ягодицы, а не поясницу\n"
-        "• Не забывай про воду и дыхание 🌊🫁"
+# Отправка следующего шага разминки Дня 2
+async def send_next_warmup_step_day2(chat_id, context):
+    index = context.user_data.get("warmup_index", 0)
+
+    if index >= len(warmup_steps_day2):
+        await context.bot.send_message(chat_id=chat_id,
+            text=(
+                "🎉 Разминка завершена! Переходим к основной тренировке...\n\n"
+                "🍑 *ДЕНЬ 2 — Ягодицы, ноги, пресс*\n\n"
+                "• Приседания с гантелями — 3×15\n"
+                "• Выпады вперёд (каждая нога) — 3×12\n"
+                "• Ягодичный мостик с весом — 3×15\n"
+                "• Подъём ног лёжа (пресс) — 3×20\n"
+                "• Скручивания — 3×20\n"
+                "• Планка боковая (левая + правая) — по 30 сек"
+            ),
+            parse_mode="Markdown"
+        )
+        context.user_data["main_index"] = 0
+        await send_next_main_step_day2(chat_id, context)
+        return
+
+    step = warmup_steps_day2[index]
+
+    text = f"*{step['name']}*\n"
+    text += f"⏱ {step['duration']} сек" if step["type"] == "time" else f"🔁 {step['reps']} раз"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"разминка2_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"разминка2_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(tips, parse_mode="Markdown")
+
+    context.user_data["warmup_message_ids"] = [message.message_id]
+
+# Отправка следующего шага основной тренировки Дня 2
+async def send_next_main_step_day2(chat_id, context):
+    index = context.user_data.get("main_index", 0)
+
+    if index >= len(main_workout_day2):
+        await context.bot.send_message(chat_id=chat_id, text="🎉 Основная тренировка Дня 2 завершена! Отличная работа! 💪")
+        return
+
+    step = main_workout_day2[index]
+    text = f"*{step['name']}*\n"
+
+    if step.get("type") == "time":
+        text += f"⏱ {step['sets']}×{step['duration']} сек"
+    else:
+        text += f"🔁 {step['reps']}"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"тренировка2_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"тренировка2_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
+    )
+
+    context.user_data["main_message_ids"] = [message.message_id]
+############################################################################################################################
+
+main_workout_day3 = [
+    {"name": "Подтягивания", "reps": "3×максимум"},
+    {"name": "Тяга гантелей в наклоне", "reps": "3×12"},
+    {"name": "Разводка гантелей в стороны", "reps": "3×12"},
+    {"name": "\"Супермен\" лёжа", "reps": "3×20"},
+    {"name": "Планка с подъёмом ноги", "duration": 30, "type": "time", "sets": 3},
+    {"name": "Скручивания с руками вверх", "reps": "3×20"}
+]
+
+warmup_steps_day3 = [
+    {"name": "Прыжки на месте", "duration": 60, "type": "time"},
+    {"name": "Круговые вращения руками и ногами", "duration": 60, "type": "time"},
+    {"name": "Приседания без веса", "reps": 15, "type": "reps"},
+    {"name": "Наклоны в стороны", "reps": 20, "type": "reps"},
+    {"name": "Планка", "duration": 30, "type": "time"}
+]
 
 async def handle_day3_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    # 1. Разминка
-    warmup = (
-        "🟡 *РАЗМИНКА (5 минут)*\n"
-        "• Прыжки на месте — 1 мин\n"
-        "• Круговые вращения руками и ногами — 1 мин\n"
-        "• Приседания без веса — 15 раз\n"
-        "• Наклоны в стороны — 20 раз\n"
-        "• Планка — 30 сек\n"
-    )
-    await query.message.reply_text(warmup, parse_mode="Markdown")
+    context.user_data["warmup_index"] = 0
+    context.user_data["main_index"] = 0
+    context.user_data["warmup_message_ids"] = []
+    context.user_data["main_message_ids"] = []
 
-    # 2. Основная тренировка
-    workout = (
-        "🦾 *ДЕНЬ 3 — Спина, плечи, пресс*\n\n"
-        "• Подтягивания — 3×максимум (можно с резинкой или гравитроном)\n"
-        "• Тяга гантелей в наклоне — 3×12\n"
-        "• Разводка гантелей в стороны — 3×12\n"
-        "• \"Супермен\" лёжа — 3×20\n"
-        "• Планка с подъёмом ноги — 3×30 сек\n"
-        "• Скручивания с руками вверх — 3×20"
+    await query.message.reply_text(
+        "🟡 *РАЗМИНКА (5 минут)*\nНачнём шаг за шагом!\n\n"
+        "1️⃣ Прыжки на месте — 60 секунд\n"
+        "2️⃣ Круговые вращения руками и ногами — 60 секунд\n"
+        "3️⃣ Приседания без веса — 15 повторений\n"
+        "4️⃣ Наклоны в стороны — 20 повторений\n"
+        "5️⃣ Планка — 30 секунд\n",
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(workout, parse_mode="Markdown")
+    await send_next_warmup_step_day3(query.message.chat_id, context)
 
-    # 3. Полезные советы
-    tips = (
-        "🧠 *ПОЛЕЗНЫЕ ПРАВИЛА:*\n"
-        "• Не зажимай шею при тяге — шея расслаблена\n"
-        "• При разведении гантелей не бросай руки вниз, движение должно быть контролируемым\n"
-        "• В упражнении \"Супермен\" держи голову на одной линии с телом\n"
-        "• Напрягай пресс даже в упражнениях на спину — так ты защищаешь поясницу"
+async def send_next_warmup_step_day3(chat_id, context):
+    index = context.user_data.get("warmup_index", 0)
+
+    if index >= len(warmup_steps_day3):
+        await context.bot.send_message(chat_id=chat_id,
+            text=(
+                "🎉 Разминка завершена! Переходим к основной тренировке...\n\n"
+                "🦾 *ДЕНЬ 3 — Спина, плечи, пресс*\n\n"
+                "• Подтягивания — 3×максимум\n"
+                "• Тяга гантелей в наклоне — 3×12\n"
+                "• Разводка гантелей в стороны — 3×12\n"
+                "• \"Супермен\" лёжа — 3×20\n"
+                "• Планка с подъёмом ноги — 3×30 сек\n"
+                "• Скручивания с руками вверх — 3×20"
+            ),
+            parse_mode="Markdown"
+        )
+        context.user_data["main_index"] = 0
+        await send_next_main_step_day3(chat_id, context)
+        return
+
+    step = warmup_steps_day3[index]
+    text = f"*{step['name']}*\n"
+    text += f"⏱ {step['duration']} сек" if step["type"] == "time" else f"🔁 {step['reps']} раз"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"разминка3_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"разминка3_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(tips, parse_mode="Markdown")
+
+    context.user_data["warmup_message_ids"] = [message.message_id]
+
+async def send_next_main_step_day3(chat_id, context):
+    index = context.user_data.get("main_index", 0)
+
+    if index >= len(main_workout_day3):
+        await context.bot.send_message(chat_id=chat_id, text="🎉 Основная тренировка Дня 3 завершена! Молодец, зверюга! 🐺")
+        return
+
+    step = main_workout_day3[index]
+    text = f"*{step['name']}*\n"
+
+    if step.get("type") == "time":
+        text += f"⏱ {step['sets']}×{step['duration']} сек"
+    else:
+        text += f"🔁 {step['reps']}"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"тренировка3_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"тренировка3_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
+    )
+
+    context.user_data["main_message_ids"] = [message.message_id]
+
+############################################################################################################################
+main_workout_day4 = [
+    {"name": "Бёрпи", "reps": "3×10"},
+    {"name": "Прыжки с разведением ног", "reps": "3×20"},
+    {"name": "Отжимания на максимум", "reps": "3×макс"},
+    {"name": "Скручивания на пресс", "reps": "3×20"},
+    {"name": "Планка", "duration": 60, "type": "time", "sets": 3}
+]
+
+warmup_steps_day4 = [
+    {"name": "Прыжки на месте", "duration": 60, "type": "time"},
+    {"name": "Круговые вращения руками и ногами", "duration": 60, "type": "time"},
+    {"name": "Приседания без веса", "reps": 15, "type": "reps"},
+    {"name": "Наклоны в стороны", "reps": 20, "type": "reps"},
+    {"name": "Планка", "duration": 30, "type": "time"}
+]
 
 async def handle_day4_workout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    # 1. Разминка
-    warmup = (
-        "🟡 *РАЗМИНКА (5 минут)*\n"
-        "• Прыжки на месте — 1 мин\n"
-        "• Круговые вращения руками и ногами — 1 мин\n"
-        "• Приседания без веса — 15 раз\n"
-        "• Наклоны в стороны — 20 раз\n"
-        "• Планка — 30 сек\n"
+    context.user_data["warmup_index"] = 0
+    context.user_data["main_index"] = 0
+    context.user_data["warmup_message_ids"] = []
+    context.user_data["main_message_ids"] = []
+
+    await query.message.reply_text(
+        "🟡 *РАЗМИНКА (5 минут)*\nНачнём шаг за шагом!\n\n"
+        "1️⃣ Прыжки на месте — 60 секунд\n"
+        "2️⃣ Круговые вращения руками и ногами — 60 секунд\n"
+        "3️⃣ Приседания без веса — 15 повторений\n"
+        "4️⃣ Наклоны в стороны — 20 повторений\n"
+        "5️⃣ Планка — 30 секунд\n",
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(warmup, parse_mode="Markdown")
+    await send_next_warmup_step_day4(query.message.chat_id, context)
 
-    # 2. Основная тренировка
-    workout = (
-        "⚡ *ДЕНЬ 4 — Кардио и добивка*\n\n"
-        "• Бёрпи — 3×10\n"
-        "• Прыжки с разведением ног — 3×20\n"
-        "• Отжимания на максимум — 3×макс\n"
-        "• Скручивания на пресс — 3×20\n"
-        "• Планка — 3×1 мин"
+async def send_next_warmup_step_day4(chat_id, context):
+    index = context.user_data.get("warmup_index", 0)
+
+    if index >= len(warmup_steps_day4):
+        await context.bot.send_message(chat_id=chat_id,
+            text=(
+                "🎉 Разминка завершена! Переходим к основной тренировке...\n\n"
+                "⚡ *ДЕНЬ 4 — Кардио и добивка*\n\n"
+                "• Бёрпи — 3×10\n"
+                "• Прыжки с разведением ног — 3×20\n"
+                "• Отжимания на максимум — 3×макс\n"
+                "• Скручивания на пресс — 3×20\n"
+                "• Планка — 3×1 мин"
+            ),
+            parse_mode="Markdown"
+        )
+        context.user_data["main_index"] = 0
+        await send_next_main_step_day4(chat_id, context)
+        return
+
+    step = warmup_steps_day4[index]
+    text = f"*{step['name']}*\n"
+    text += f"⏱ {step['duration']} сек" if step["type"] == "time" else f"🔁 {step['reps']} раз"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"разминка4_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"разминка4_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(workout, parse_mode="Markdown")
 
-    # 3. Полезные советы
-    tips = (
-        "🧠 *ПОЛЕЗНЫЕ ПРАВИЛА:*\n"
-        "• Следи за дыханием во время кардио — выдох на усилие\n"
-        "• Делай бёрпи в своём темпе — лучше качество, чем темп 🐢\n"
-        "• Пей воду маленькими глотками между кругами 💧\n"
-        "• После — сделай лёгкую растяжку, особенно ног"
+    context.user_data["warmup_message_ids"] = [message.message_id]
+
+
+
+async def send_next_main_step_day4(chat_id, context):
+    index = context.user_data.get("main_index", 0)
+
+    if index >= len(main_workout_day4):
+        await context.bot.send_message(chat_id=chat_id, text="🎉 День 4 завершён! Ты монстр! 🧨 Отдых заслужен.")
+        return
+
+    step = main_workout_day4[index]
+    text = f"*{step['name']}*\n"
+
+    if step.get("type") == "time":
+        text += f"⏱ {step['sets']}×{step['duration']} сек"
+    else:
+        text += f"🔁 {step['reps']}"
+
+    buttons = [
+        [
+            InlineKeyboardButton("▶️ Я начал", callback_data=f"тренировка4_шаг_{index}_старт"),
+            InlineKeyboardButton("✅ Я сделал", callback_data=f"тренировка4_шаг_{index}_готово")
+        ]
+    ]
+
+    message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown"
     )
-    await query.message.reply_text(tips, parse_mode="Markdown")
+
+    context.user_data["main_message_ids"] = [message.message_id]
 
 
 
 
 
-
-
-
-
-
-
-
+############################################################################################################################
 
 
 async def random_skuki(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -387,13 +1051,17 @@ async def main():
     app.add_handler(CommandHandler("exit", exit_chat))
     app.add_handler(CommandHandler("random_skuki", random_skuki))
     app.add_handler(CommandHandler("random_zaryadki", random_zaryadki))
-
-
     app.add_handler(CommandHandler("training", start_training_menu))
+
     app.add_handler(CallbackQueryHandler(handle_day1_workout, pattern='^тренировка_день1$'))
     app.add_handler(CallbackQueryHandler(handle_day2_workout, pattern='^тренировка_день2$'))
     app.add_handler(CallbackQueryHandler(handle_day3_workout, pattern='^тренировка_день3$'))
     app.add_handler(CallbackQueryHandler(handle_day4_workout, pattern='^тренировка_день4$'))
+    app.add_handler(CallbackQueryHandler(handle_warmup_step, pattern=r'^разминка_шаг_\d+_(старт|готово)$'))
+    app.add_handler(CallbackQueryHandler(handle_training_day_selection, pattern=r"^тренировка[1-4]$"))
+    app.add_handler(CallbackQueryHandler(handle_warmup_step, pattern=r"^разминка[1-4]_шаг_\d+_(старт|готово)$"))
+    app.add_handler(CallbackQueryHandler(handle_main_step, pattern=r"^тренировка[1-4]_шаг_\d+_(старт|готово)$"))
+
 
 
 
@@ -403,7 +1071,9 @@ async def main():
 
     await set_commands(app)
 
-    print("Бот запущен...")
+    print("Бот запущен локально через polling...")
+    # await app.run_polling()
+
     await app.run_webhook(
         listen="0.0.0.0",  # Привязка к всем адресам
         port=int(os.getenv("PORT", 5000)),  # Порт для прослушивания
